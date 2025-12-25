@@ -2,13 +2,15 @@ name: Krold Master AutoPost
 
 on:
   schedule:
-    - cron: '30 13 * * *' # 7:00 PM IST
+    # ⏱️ Target 1: Subah 10:00 AM se 11:00 AM IST (04:30 UTC)
+    - cron: '30 04 * * *' 
+    # ⏱️ Target 2: Shaam 07:00 PM se 08:00 PM IST (13:30 UTC)
+    - cron: '30 13 * * *' 
   workflow_dispatch: 
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    # 🔑 Permissions zaruri hain file commit karne ke liye
     permissions:
       contents: write
       
@@ -35,17 +37,17 @@ jobs:
           INSTA_SESSION_JSON: ${{ secrets.INSTA_SESSION_JSON }}
           YT_TOKEN_JSON: ${{ secrets.YT_TOKEN_JSON }}
         run: |
+          # 🎲 0 se 3600 seconds (1 ghanta) ka random delay
+          # Isse subah 10-11 bje aur shaam 7-8 bje ke beech random posting hogi
           delay=$((RANDOM % 3601))
           echo "Waiting for $delay seconds..."
           sleep $delay
           python multi_bot.py
 
-      # ✅ NEW: History ko wapas GitHub repo mein save karna
       - name: Commit and Push History
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add posted_videos.txt
-          # Commit sirf tab hoga agar ID add hui ho
           git commit -m "Update posted videos history [skip ci]" || echo "No changes to commit"
           git push
