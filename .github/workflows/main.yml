@@ -1,28 +1,28 @@
-name: Krold Auto-Post Bot
+name: Krold Master AutoPost
 
 on:
   schedule:
-    - cron: '30 15 * * *' # Roz 9:00 PM IST par chalega
-  workflow_dispatch: # Manual button se chalane ke liye
+    - cron: '0 15 * * *' # Roz 8:30 PM IST par
+  workflow_dispatch: # Manual Button
 
 jobs:
-  post:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
+      - uses: actions/checkout@v3
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-
-      - name: Install Dependencies
+      
+      - name: Install FFmpeg & Deps
         run: |
           sudo apt-get update && sudo apt-get install -y ffmpeg
-          pip install instagrapi moviepy requests google-api-python-client google-auth-oauthlib
+          pip install --upgrade pip
+          # Fix for Instagram Metadata validation error
+          pip install "pydantic<2.0" instagrapi moviepy requests google-api-python-client google-auth-oauthlib
 
-      - name: Run Multi-Bot
+      - name: Run Bot
         env:
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           INSTA_USERNAME: ${{ secrets.INSTA_USERNAME }}
