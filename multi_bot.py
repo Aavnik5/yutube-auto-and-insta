@@ -18,9 +18,8 @@ INSTA_USER = os.getenv("INSTA_USERNAME")
 INSTA_PASS = os.getenv("INSTA_PASSWORD")
 FOLDER_ID = "16xkYWn6J3oFm5GSGytr2go18QMHjVgpo"
 
-# --- 1. VIRAL CONTENT GENERATOR (50 Captions & 50 Hashtags) ---
+# --- 1. VIRAL CONTENT GENERATOR (50+ Set) ---
 def get_viral_content():
-    # 📝 50 Viral Captions
     captions = [
         "Success is a mindset, not a destination. ✨", "The grind is silent, the success is loud. 🦁",
         "Luxury is the reward for your hard work. 💰", "Your future self is counting on you. 💎",
@@ -48,8 +47,6 @@ def get_viral_content():
         "Make your life a masterpiece. 🖼️", "The journey is the reward. 🛤️",
         "Choose your path and walk it with pride. 👞", "Turn your obstacles into opportunities. 🛠️"
     ]
-    
-    # #️⃣ 50 Trending Hashtags
     hashtags_pool = [
         "#Luxury", "#Wealth", "#Success", "#Motivation", "#Mindset", "#Entrepreneur", "#Goals", "#Billionaire",
         "#RichLife", "#Millionaire", "#FinancialFreedom", "#LuxuryLifestyle", "#Aesthetic", "#Shorts", "#Reels",
@@ -59,14 +56,9 @@ def get_viral_content():
         "#LuxuryTravel", "#LuxuryCars", "#Supercars", "#Architecture", "#ModernVilla", "#BusinessOwner",
         "#AestheticPost", "#Power", "#GrowthMindset", "#SelfImprovement", "#Income", "#Asset", "#PassiveIncome"
     ]
-    
     selected_caption = random.choice(captions)
-    # Picking 15 random hashtags for each post
-    random_tags = random.sample(hashtags_pool, 15)
-    tag_string = " ".join(random_tags)
-    
-    full_insta_caption = f"{selected_caption}\n.\n.\n.\n{tag_string}"
-    return full_insta_caption, selected_caption
+    tag_string = " ".join(random.sample(hashtags_pool, 15))
+    return f"{selected_caption}\n.\n.\n.\n{tag_string}", selected_caption
 
 # --- 2. DRIVE MUSIC AUTO-SCANNER ---
 def download_random_music():
@@ -89,31 +81,50 @@ def download_random_music():
         return path
     except Exception as e: return None
 
-# --- 3. PEXELS VIDEO FETCH ---
+# --- 3. PEXELS VIDEO FETCH (High Quality Filter) ---
 def get_video():
-    print("🎥 Fetching ~30s luxury video from Pexels...")
-    queries = ["luxury cars", "modern villa", "aesthetic city"]
+    print("🎥 Fetching HIGH QUALITY luxury video from Pexels...")
+    queries = ["luxury cars 4k", "modern architecture hd", "expensive lifestyle aesthetic", "luxury villa portrait"]
     headers = {"Authorization": PEXELS_KEY}
     url = f"https://api.pexels.com/videos/search?query={random.choice(queries)}&per_page=15&orientation=portrait"
     res = requests.get(url, headers=headers).json()
+    
+    # 25s+ videos ko filter karein
     valid_videos = [v for v in res['videos'] if v['duration'] >= 25]
     video_data = random.choice(valid_videos if valid_videos else res['videos'])
+    
+    # Sabse badi resolution wali file dhoondna (4K/HD)
+    best_file = max(video_data['video_files'], key=lambda x: x['width'])
+    print(f"💎 Selected Resolution: {best_file['width']}x{best_file['height']}")
+    
     with open("raw_video.mp4", "wb") as f:
-        f.write(requests.get(video_data['video_files'][0]['link']).content)
+        f.write(requests.get(best_file['link']).content)
     return "raw_video.mp4"
 
-# --- 4. MIXING & CLIPPING ---
+# --- 4. MIXING & CLIPPING (Pro Encoding Settings) ---
 def create_final_video(video_path, audio_path):
-    print("🎬 Clipping to 30s and Muxing Audio...")
+    print("🎬 Mixing with Professional Encoding (30s)...")
     try:
         video = VideoFileClip(video_path).without_audio()
         if video.duration > 30: video = video.subclip(0, 30)
         target_dur = video.duration
+        
         if audio_path and os.path.exists(audio_path):
             audio = AudioFileClip(audio_path).set_duration(target_dur)
             video = video.set_audio(audio)
+            
         output = "final_output.mp4"
-        video.write_videofile(output, codec="libx264", audio_codec="aac", fps=24, logger=None)
+        # 🚀 HIGH QUALITY ENCODING
+        video.write_videofile(
+            output, 
+            codec="libx264", 
+            audio_codec="aac", 
+            fps=30, 
+            bitrate="10000k", 
+            preset="slow",
+            ffmpeg_params=["-crf", "18"],
+            logger=None
+        )
         return output
     except Exception as e: return video_path
 
@@ -125,7 +136,7 @@ if __name__ == "__main__":
         a_raw = download_random_music()
         final_video = create_final_video(v_raw, a_raw)
         
-        # Independent Platform Runs
+        # Instagram
         try:
             cl = Client()
             cl.set_settings(json.loads(os.getenv("INSTA_SESSION_JSON")))
@@ -134,6 +145,7 @@ if __name__ == "__main__":
             print("✅ Instagram Success!")
         except Exception as e: print(f"❌ Insta Fail: {e}")
 
+        # YouTube
         try:
             creds = Credentials.from_authorized_user_info(json.loads(os.getenv("YT_TOKEN_JSON")))
             yt = build('youtube', 'v3', credentials=creds)
