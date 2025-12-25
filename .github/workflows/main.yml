@@ -1,0 +1,30 @@
+name: Krold Multi-Bot AutoPost
+
+on:
+  schedule:
+    - cron: '30 14 * * *' # Roz raat 8:00 PM IST (UTC 14:30)
+  workflow_dispatch: # Manual run karne ka option
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install FFmpeg & Deps
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+          pip install instagrapi moviepy requests google-api-python-client google-auth-oauthlib
+
+      - name: Run Bot
+        env:
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          INSTA_USERNAME: ${{ secrets.INSTA_USERNAME }}
+          INSTA_PASSWORD: ${{ secrets.INSTA_PASSWORD }}
+          INSTA_SESSION_JSON: ${{ secrets.INSTA_SESSION_JSON }}
+          YT_TOKEN_JSON: ${{ secrets.YT_TOKEN_JSON }}
+        run: python multi_bot.py
