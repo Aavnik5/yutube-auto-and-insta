@@ -2,24 +2,29 @@ name: Krold Master AutoPost
 
 on:
   schedule:
-    # 7:00 PM IST = 13:30 UTC
-    - cron: '30 13 * * *' 
-  workflow_dispatch: # Manual Button
+    - cron: '30 13 * * *' # 7:00 PM IST
+  workflow_dispatch: 
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    # 🔑 Permissions zaruri hain file commit karne ke liye
+    permissions:
+      contents: write
+      
     steps:
       - uses: actions/checkout@v3
+        with:
+          persist-credentials: true
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
       
-      - name: Install FFmpeg & Fixed Libraries
+      - name: Install FFmpeg & Libraries
         run: |
           sudo apt-get update && sudo apt-get install -y ffmpeg
-          pip install --upgrade pip
           pip install "moviepy<2.0.0" "pydantic<2.0" instagrapi requests google-api-python-client google-auth-oauthlib
 
       - name: Run Bot with Random Delay
@@ -30,8 +35,17 @@ jobs:
           INSTA_SESSION_JSON: ${{ secrets.INSTA_SESSION_JSON }}
           YT_TOKEN_JSON: ${{ secrets.YT_TOKEN_JSON }}
         run: |
-          # 🎲 0 se 3600 seconds (1 ghanta) ke beech random delay
           delay=$((RANDOM % 3601))
-          echo "Waiting for $delay seconds before posting..."
+          echo "Waiting for $delay seconds..."
           sleep $delay
           python multi_bot.py
+
+      # ✅ NEW: History ko wapas GitHub repo mein save karna
+      - name: Commit and Push History
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add posted_videos.txt
+          # Commit sirf tab hoga agar ID add hui ho
+          git commit -m "Update posted videos history [skip ci]" || echo "No changes to commit"
+          git push
