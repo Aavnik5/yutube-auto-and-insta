@@ -17,6 +17,19 @@ PEXELS_KEY = os.getenv("PEXELS_API_KEY")
 INSTA_USER = os.getenv("INSTA_USERNAME")
 INSTA_PASS = os.getenv("INSTA_PASSWORD")
 FOLDER_ID = "16xkYWn6J3oFm5GSGytr2go18QMHjVgpo"
+# 📄 History file name
+HISTORY_FILE = "posted_videos.txt"
+
+# --- NEW: HISTORY TRACKER FUNCTIONS ---
+def load_posted_ids():
+    if os.path.exists(HISTORY_FILE):
+        with open(HISTORY_FILE, "r") as f:
+            return set(line.strip() for line in f)
+    return set()
+
+def save_posted_id(video_id):
+    with open(HISTORY_FILE, "a") as f:
+        f.write(f"{video_id}\n")
 
 # --- 1. VIRAL CONTENT GENERATOR (50+ Set) ---
 def get_viral_content():
@@ -81,25 +94,31 @@ def download_random_music():
         return path
     except Exception as e: return None
 
-# --- 3. PEXELS VIDEO FETCH (High Quality Filter) ---
+# --- 3. PEXELS VIDEO FETCH (High Quality & History Filter) ---
 def get_video():
     print("🎥 Fetching HIGH QUALITY luxury video from Pexels...")
+    posted_ids = load_posted_ids()
     queries = ["luxury cars 4k", "modern architecture hd", "expensive lifestyle aesthetic", "luxury villa portrait"]
     headers = {"Authorization": PEXELS_KEY}
-    url = f"https://api.pexels.com/videos/search?query={random.choice(queries)}&per_page=15&orientation=portrait"
+    url = f"https://api.pexels.com/videos/search?query={random.choice(queries)}&per_page=30&orientation=portrait"
     res = requests.get(url, headers=headers).json()
     
-    # 25s+ videos ko filter karein
-    valid_videos = [v for v in res['videos'] if v['duration'] >= 25]
-    video_data = random.choice(valid_videos if valid_videos else res['videos'])
+    # 💎 Filter videos not in history
+    valid_videos = [v for v in res['videos'] if v['duration'] >= 25 and str(v['id']) not in posted_ids]
     
-    # Sabse badi resolution wali file dhoondna (4K/HD)
+    if not valid_videos:
+        print("⚠️ All fetched videos were already posted. Trying fallback...")
+        video_data = random.choice(res['videos']) # Fallback if everything is duplicate
+    else:
+        video_data = random.choice(valid_videos)
+    
+    video_id = str(video_data['id'])
     best_file = max(video_data['video_files'], key=lambda x: x['width'])
-    print(f"💎 Selected Resolution: {best_file['width']}x{best_file['height']}")
+    print(f"💎 Selected Resolution: {best_file['width']}x{best_file['height']} (ID: {video_id})")
     
     with open("raw_video.mp4", "wb") as f:
         f.write(requests.get(best_file['link']).content)
-    return "raw_video.mp4"
+    return "raw_video.mp4", video_id
 
 # --- 4. MIXING & CLIPPING (Pro Encoding Settings) ---
 def create_final_video(video_path, audio_path):
@@ -132,10 +151,13 @@ def create_final_video(video_path, audio_path):
 if __name__ == "__main__":
     try:
         insta_cap, yt_title = get_viral_content()
-        v_raw = get_video()
+        # Receive video ID for tracking
+        v_raw, v_id = get_video()
         a_raw = download_random_music()
         final_video = create_final_video(v_raw, a_raw)
         
+        success_flag = False
+
         # Instagram
         try:
             cl = Client()
@@ -143,6 +165,7 @@ if __name__ == "__main__":
             cl.login(os.getenv("INSTA_USERNAME"), os.getenv("INSTA_PASSWORD"))
             cl.clip_upload(final_video, caption=insta_cap)
             print("✅ Instagram Success!")
+            success_flag = True
         except Exception as e: print(f"❌ Insta Fail: {e}")
 
         # YouTube
@@ -153,6 +176,11 @@ if __name__ == "__main__":
                     'status': {'privacyStatus': 'public', 'selfDeclaredMadeForKids': False}}
             yt.videos().insert(part='snippet,status', body=body, media_body=MediaFileUpload(final_video)).execute()
             print("✅ YouTube Success!")
+            success_flag = True
         except Exception as e: print(f"❌ YouTube Fail: {e}")
+
+        # Save ID only if at least one platform succeeded
+        if success_flag:
+            save_posted_id(v_id)
 
     except Exception as e: print(f"💀 Fatal Error: {e}")
