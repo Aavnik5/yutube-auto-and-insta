@@ -2,7 +2,8 @@ name: Krold Master AutoPost
 
 on:
   schedule:
-    - cron: '0 15 * * *' # Roz 8:30 PM IST
+    # 7:00 PM IST = 13:30 UTC
+    - cron: '30 13 * * *' 
   workflow_dispatch: # Manual Button
 
 jobs:
@@ -19,14 +20,18 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y ffmpeg
           pip install --upgrade pip
-          # MoviePy and Pydantic version pinning for stability
           pip install "moviepy<2.0.0" "pydantic<2.0" instagrapi requests google-api-python-client google-auth-oauthlib
 
-      - name: Run Bot
+      - name: Run Bot with Random Delay
         env:
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           INSTA_USERNAME: ${{ secrets.INSTA_USERNAME }}
           INSTA_PASSWORD: ${{ secrets.INSTA_PASSWORD }}
           INSTA_SESSION_JSON: ${{ secrets.INSTA_SESSION_JSON }}
           YT_TOKEN_JSON: ${{ secrets.YT_TOKEN_JSON }}
-        run: python multi_bot.py
+        run: |
+          # 🎲 0 se 3600 seconds (1 ghanta) ke beech random delay
+          delay=$((RANDOM % 3601))
+          echo "Waiting for $delay seconds before posting..."
+          sleep $delay
+          python multi_bot.py
