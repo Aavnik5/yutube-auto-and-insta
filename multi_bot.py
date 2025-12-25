@@ -16,126 +16,131 @@ from google.oauth2.credentials import Credentials
 PEXELS_KEY = os.getenv("PEXELS_API_KEY")
 INSTA_USER = os.getenv("INSTA_USERNAME")
 INSTA_PASS = os.getenv("INSTA_PASSWORD")
+FOLDER_ID = "16xkYWn6J3oFm5GSGytr2go18QMHjVgpo"
 
-# --- 1. DYNAMIC VIRAL CONTENT (Clean) ---
+# --- 1. VIRAL CONTENT GENERATOR (50 Captions & 50 Hashtags) ---
 def get_viral_content():
+    # 📝 50 Viral Captions
     captions = [
-        "Success is a mindset, not a destination. ✨",
-        "The grind is silent, the success is loud. 🦁",
-        "Luxury is the reward for your hard work. 💰",
-        "Don't stay in bed unless you're making money. 🚀",
-        "Your future self is counting on you. 💎",
-        "Dream big, work harder. 🏆",
-        "Work until your bank account looks like a phone number. 📞",
-        "Level up in private. Let them wonder. 🌪️"
+        "Success is a mindset, not a destination. ✨", "The grind is silent, the success is loud. 🦁",
+        "Luxury is the reward for your hard work. 💰", "Your future self is counting on you. 💎",
+        "Dream big, work harder. 🏆", "Level up in private. Let them wonder. 🌪️",
+        "Work until your bank account looks like a phone number. 📞", "Silence is the best status symbol. 🤫",
+        "I didn't come this far to only come this far. 🏎️", "Invest in your dreams. Grind now, shine later. 🥂",
+        "Classy is when you have a lot to say but stay silent. 🎩", "Your only limit is your mind. ⛓️",
+        "Don't stay in bed unless you're making money. 🛌", "Life is short. Make every second count. ⌚",
+        "The best revenge is massive success. 🔥", "Don't stop until you're proud. 👑",
+        "Focus on the goal, not the obstacles. 🎯", "Consistency is what transforms average into excellence. 🛠️",
+        "Wealth is a state of mind. 🏦", "Be so good they can't ignore you. 🌟",
+        "Discipline will take you where motivation can't. 🚀", "Small steps lead to big results. 📈",
+        "Style is a reflection of your attitude. 👔", "Chasing dreams, catching excellence. 🌌",
+        "Quality over quantity, always. 💎", "Live life on your own terms. 🗺️",
+        "A goal without a plan is just a wish. 🌠", "Everything you want is on the other side of fear. 🦁",
+        "Master your mindset, master your life. 🧠", "Stay humble, stay focused, stay blessed. 🙏",
+        "The secret of getting ahead is getting started. 🚦", "Your energy is your currency. Spend it wisely. ⚡",
+        "Hustle until your haters ask if you're hiring. 💼", "Winners focus on winning, losers focus on winners. 🏆",
+        "Great things never come from comfort zones. 🛋️", "Success belongs to those who prepare for it. 📝",
+        "Building an empire in silence. 🏗️", "Manifesting a life full of luxury. ✨",
+        "Stay hungry, stay foolish. 🍎", "If you want to be successful, be consistent. 🔄",
+        "Don't tell people your dreams, show them. 🎬", "Be the person you've always wanted to meet. 💎",
+        "Hard work beats talent when talent doesn't work hard. ⚡", "I’m not lucky, I’m hardworking. 🍀",
+        "Success is my only option. 🎯", "Vision without action is just a dream. 👁️",
+        "Make your life a masterpiece. 🖼️", "The journey is the reward. 🛤️",
+        "Choose your path and walk it with pride. 👞", "Turn your obstacles into opportunities. 🛠️"
     ]
-    hashtags = "#Luxury #Wealth #Success #Motivation #Trending #Shorts #Reels"
-    selected = random.choice(captions)
-    return f"{selected}\n.\n.\n{hashtags}", selected
+    
+    # #️⃣ 50 Trending Hashtags
+    hashtags_pool = [
+        "#Luxury", "#Wealth", "#Success", "#Motivation", "#Mindset", "#Entrepreneur", "#Goals", "#Billionaire",
+        "#RichLife", "#Millionaire", "#FinancialFreedom", "#LuxuryLifestyle", "#Aesthetic", "#Shorts", "#Reels",
+        "#Viral", "#Trending", "#Explore", "#HighLife", "#Elite", "#Ambition", "#DreamBig", "#Wealthy",
+        "#MoneyMindset", "#RichVibes", "#ClassicStyle", "#Vibe", "#SuccessMindset", "#Hustle", "#DailyMotivation",
+        "#VisualAesthetic", "#Modern", "#Dubai", "#Monaco", "#ExpensiveTaste", "#HighSociety", "#Classy",
+        "#LuxuryTravel", "#LuxuryCars", "#Supercars", "#Architecture", "#ModernVilla", "#BusinessOwner",
+        "#AestheticPost", "#Power", "#GrowthMindset", "#SelfImprovement", "#Income", "#Asset", "#PassiveIncome"
+    ]
+    
+    selected_caption = random.choice(captions)
+    # Picking 15 random hashtags for each post
+    random_tags = random.sample(hashtags_pool, 15)
+    tag_string = " ".join(random_tags)
+    
+    full_insta_caption = f"{selected_caption}\n.\n.\n.\n{tag_string}"
+    return full_insta_caption, selected_caption
 
-# --- 2. DRIVE MUSIC DOWNLOADER ---
-def download_music():
-    print("📥 Downloading random music from Google Drive...")
-    # ⚠️ Apni File IDs yahan daalein
-    drive_ids = ["16xkYWn6J3oFm5GSGytr2go18QMHjVgpo"] 
-    file_id = random.choice(drive_ids)
-    url = f'https://drive.google.com/uc?export=download&id={file_id}'
-    
-    os.makedirs("music", exist_ok=True)
-    music_path = "music/bg_audio.mp3"
-    
-    res = requests.get(url, stream=True)
-    if res.status_code == 200:
-        with open(music_path, 'wb') as f:
+# --- 2. DRIVE MUSIC AUTO-SCANNER ---
+def download_random_music():
+    print("📥 Scanning Google Drive folder for music...")
+    try:
+        creds_info = json.loads(os.getenv("YT_TOKEN_JSON"))
+        creds = Credentials.from_authorized_user_info(creds_info)
+        service = build('drive', 'v3', credentials=creds)
+        results = service.files().list(q=f"'{FOLDER_ID}' in parents and mimeType='audio/mpeg'", fields="files(id, name)").execute()
+        items = results.get('files', [])
+        if not items: return None
+        selected_file = random.choice(items)
+        file_id = selected_file['id']
+        url = f'https://drive.google.com/uc?export=download&id={file_id}'
+        os.makedirs("music", exist_ok=True)
+        path = "music/bg_audio.mp3"
+        res = requests.get(url, stream=True)
+        with open(path, 'wb') as f:
             for chunk in res.iter_content(chunk_size=8192): f.write(chunk)
-        return music_path
-    return None
+        return path
+    except Exception as e: return None
 
-# --- 3. PEXELS VIDEO FETCH (Filtered for 30s+) ---
+# --- 3. PEXELS VIDEO FETCH ---
 def get_video():
-    print("🎥 Fetching luxury video (Target: 30s+)...")
-    queries = ["luxury cars", "modern architecture", "expensive lifestyle", "aesthetic city"]
-    query = random.choice(queries)
+    print("🎥 Fetching ~30s luxury video from Pexels...")
+    queries = ["luxury cars", "modern villa", "aesthetic city"]
     headers = {"Authorization": PEXELS_KEY}
-    url = f"https://api.pexels.com/videos/search?query={query}&per_page=20&orientation=portrait"
-    
+    url = f"https://api.pexels.com/videos/search?query={random.choice(queries)}&per_page=15&orientation=portrait"
     res = requests.get(url, headers=headers).json()
-    # Sirf wahi videos dekho jo 25-30 seconds se lambi hain
-    valid_videos = [v for v in res['videos'] if v['duration'] >= 28]
-    
-    if not valid_videos:
-        video_data = random.choice(res['videos']) # Fallback
-    else:
-        video_data = random.choice(valid_videos)
-        
-    video_url = video_data['video_files'][0]['link']
+    valid_videos = [v for v in res['videos'] if v['duration'] >= 25]
+    video_data = random.choice(valid_videos if valid_videos else res['videos'])
     with open("raw_video.mp4", "wb") as f:
-        f.write(requests.get(video_url).content)
+        f.write(requests.get(video_data['video_files'][0]['link']).content)
     return "raw_video.mp4"
 
-# --- 4. VIDEO & AUDIO MIXING (The Fix) ---
+# --- 4. MIXING & CLIPPING ---
 def create_final_video(video_path, audio_path):
-    print("🎬 Clipping to 30s and Syncing Audio...")
+    print("🎬 Clipping to 30s and Muxing Audio...")
     try:
-        # Video load karo aur uski original (silent) audio hatao
         video = VideoFileClip(video_path).without_audio()
-        
-        # Duration check aur 30 sec par cut
-        target_duration = 30
-        if video.duration > target_duration:
-            video = video.subclip(0, target_duration)
-        else:
-            target_duration = video.duration
-
-        # Audio mix karo
+        if video.duration > 30: video = video.subclip(0, 30)
+        target_dur = video.duration
         if audio_path and os.path.exists(audio_path):
-            audio = AudioFileClip(audio_path).set_duration(target_duration)
+            audio = AudioFileClip(audio_path).set_duration(target_dur)
             video = video.set_audio(audio)
-        
         output = "final_output.mp4"
-        # Audio aur Video sync fix ke liye parameters
         video.write_videofile(output, codec="libx264", audio_codec="aac", fps=24, logger=None)
         return output
-    except Exception as e:
-        print(f"❌ Mixing Error: {e}")
-        return video_path
-
-# --- 5. PLATFORM POSTING ---
-def post_insta(file_path, caption):
-    print("📸 Uploading Reel...")
-    cl = Client()
-    cl.set_settings(json.loads(os.getenv("INSTA_SESSION_JSON")))
-    cl.login(os.getenv("INSTA_USERNAME"), os.getenv("INSTA_PASSWORD"))
-    cl.clip_upload(file_path, caption=caption)
-
-def post_youtube(file_path, title):
-    print("📺 Uploading YouTube Short...")
-    creds = Credentials.from_authorized_user_info(json.loads(os.getenv("YT_TOKEN_JSON")))
-    yt = build('youtube', 'v3', credentials=creds)
-    body = {
-        'snippet': {'title': title, 'description': f'{title} #Shorts #Luxury', 'categoryId': '22'},
-        'status': {'privacyStatus': 'public', 'selfDeclaredMadeForKids': False}
-    }
-    yt.videos().insert(part='snippet,status', body=body, media_body=MediaFileUpload(file_path)).execute()
+    except Exception as e: return video_path
 
 # --- MAIN EXECUTION ---
 if __name__ == "__main__":
     try:
         insta_cap, yt_title = get_viral_content()
-        v_path = get_video()
-        a_path = download_music()
-        final_file = create_final_video(v_path, a_path)
+        v_raw = get_video()
+        a_raw = download_random_music()
+        final_video = create_final_video(v_raw, a_raw)
         
         # Independent Platform Runs
         try:
-            post_insta(final_file, insta_cap)
-            print("✅ Insta Done!")
-        except Exception as e: print(f"❌ Insta Error: {e}")
+            cl = Client()
+            cl.set_settings(json.loads(os.getenv("INSTA_SESSION_JSON")))
+            cl.login(os.getenv("INSTA_USERNAME"), os.getenv("INSTA_PASSWORD"))
+            cl.clip_upload(final_video, caption=insta_cap)
+            print("✅ Instagram Success!")
+        except Exception as e: print(f"❌ Insta Fail: {e}")
 
         try:
-            post_youtube(final_file, yt_title)
-            print("✅ YouTube Done!")
-        except Exception as e: print(f"❌ YouTube Error: {e}")
+            creds = Credentials.from_authorized_user_info(json.loads(os.getenv("YT_TOKEN_JSON")))
+            yt = build('youtube', 'v3', credentials=creds)
+            body = {'snippet': {'title': yt_title, 'description': f'{yt_title} #Shorts #Luxury', 'categoryId': '22'},
+                    'status': {'privacyStatus': 'public', 'selfDeclaredMadeForKids': False}}
+            yt.videos().insert(part='snippet,status', body=body, media_body=MediaFileUpload(final_video)).execute()
+            print("✅ YouTube Success!")
+        except Exception as e: print(f"❌ YouTube Fail: {e}")
 
-    except Exception as main_e:
-        print(f"💀 Critical Bot Error: {main_e}")
+    except Exception as e: print(f"💀 Fatal Error: {e}")
