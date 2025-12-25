@@ -5,7 +5,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from google.oauth2.credentials import Credentials
 
-# --- CONFIGURATION (GitHub Secrets se aayega) ---
+# --- CONFIGURATION (GitHub Secrets) ---
 PEXELS_KEY = os.getenv("PEXELS_API_KEY")
 INSTA_USER = os.getenv("INSTA_USERNAME")
 INSTA_PASS = os.getenv("INSTA_PASSWORD")
@@ -13,10 +13,10 @@ INSTA_PASS = os.getenv("INSTA_PASSWORD")
 # --- 1. GOOGLE DRIVE MUSIC DOWNLOADER ---
 def download_music():
     print("📥 Downloading random music from Google Drive...")
-    # ⚠️ YAHAN APNI DRIVE FILE IDs DAALEIN (Jo aapne folder se nikali hain)
+    # ⚠️ YAHAN APNI DRIVE FILE IDs DAALEIN
     drive_ids = [
-        "16xkYWn6J3oFm5GSGytr2go18QMHjVgpo", # Example ID, replace with actual File IDs
-        "ADD_YOUR_SECOND_FILE_ID_HERE"
+        "16xkYWn6J3oFm5GSGytr2go18QMHjVgpo", # Aapka folder ID (replace with specific FILE IDs)
+        "ADD_SECOND_FILE_ID_HERE"
     ]
     file_id = random.choice(drive_ids)
     url = f'https://drive.google.com/uc?export=download&id={file_id}'
@@ -34,7 +34,7 @@ def download_music():
 # --- 2. PEXELS VIDEO FETCH ---
 def get_video():
     print("🎥 Fetching luxury video from Pexels...")
-    queries = ["luxury cars", "modern villa", "aesthetic travel", "rolex watch"]
+    queries = ["luxury cars", "modern villa", "aesthetic lifestyle", "rolex"]
     query = random.choice(queries)
     headers = {"Authorization": PEXELS_KEY}
     url = f"https://api.pexels.com/videos/search?query={query}&per_page=15&orientation=portrait"
@@ -52,7 +52,6 @@ def create_final_video(video_path, audio_path):
     print("🎬 Mixing video and audio...")
     try:
         video = VideoFileClip(video_path)
-        # Agar music mil gaya toh mix karein, varna raw video use karein
         if audio_path and os.path.exists(audio_path):
             audio = AudioFileClip(audio_path).set_duration(video.duration)
             video = video.set_audio(audio)
@@ -68,9 +67,17 @@ def create_final_video(video_path, audio_path):
 def post_insta(file_path, caption):
     print("📸 Uploading to Instagram Reels...")
     cl = Client()
-    cl.set_settings(json.loads(os.getenv("INSTA_SESSION_JSON")))
+    # Pydantic validation error fix
+    session_data = json.loads(os.getenv("INSTA_SESSION_JSON"))
+    cl.set_settings(session_data)
     cl.login(INSTA_USER, INSTA_PASS)
-    cl.clip_upload(file_path, caption=caption)
+    
+    try:
+        cl.clip_upload(file_path, caption=caption)
+        print("✅ Instagram Reel Posted!")
+    except Exception as e:
+        print(f"⚠️ Clip upload failed, trying video_upload fallback: {e}")
+        cl.video_upload(file_path, caption=caption)
 
 def post_youtube(file_path, title):
     print("📺 Uploading to YouTube Shorts...")
@@ -79,22 +86,39 @@ def post_youtube(file_path, title):
     yt = build('youtube', 'v3', credentials=creds)
     
     body = {
-        'snippet': {'title': title, 'description': '#Shorts #Luxury #KroldIT', 'categoryId': '22'},
-        'status': {'privacyStatus': 'public', 'selfDeclaredMadeForKids': False}
+        'snippet': {
+            'title': title,
+            'description': 'Luxury lifestyle goals. #Shorts #Luxury',
+            'categoryId': '22'
+        },
+        'status': {
+            'privacyStatus': 'public', # Test mode mein bhi public ki koshish
+            'selfDeclaredMadeForKids': False
+        }
     }
     yt.videos().insert(part='snippet,status', body=body, media_body=MediaFileUpload(file_path)).execute()
+    print("✅ YouTube Short Posted!")
 
-# --- MAIN EXECUTION ---
+# --- MAIN EXECUTION (Independent Blocks) ---
 if __name__ == "__main__":
     try:
-        title = "Luxury is a lifestyle. ✨ #Luxury #Goals #Success"
+        content_title = "Success is the only option. ✨ #Luxury #Goals #KroldIT"
         v_path = get_video()
         a_path = download_music()
         final_file = create_final_video(v_path, a_path)
         
-        # Dono jagah post karein
-        post_insta(final_file, title)
-        post_youtube(final_file, title)
-        print("🚀 Mission Accomplished! Video posted everywhere.")
+        # Instagram Independent Try
+        try:
+            post_insta(final_file, content_title)
+        except Exception as e:
+            print(f"❌ Instagram Failed: {e}")
+
+        # YouTube Independent Try
+        try:
+            post_youtube(final_file, content_title)
+        except Exception as e:
+            print(f"❌ YouTube Failed: {e}")
+
+        print("✨ Mission Accomplished!")
     except Exception as main_e:
         print(f"💀 Critical Bot Error: {main_e}")
