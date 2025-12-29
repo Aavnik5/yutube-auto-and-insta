@@ -2,10 +2,18 @@ name: Krold Master AutoPost
 
 on:
   schedule:
-    # ⏱️ Target 1: Subah 10:00 AM se 11:00 AM IST (04:30 UTC)
-    - cron: '30 04 * * *' 
-    # ⏱️ Target 2: Shaam 07:00 PM se 08:00 PM IST (13:30 UTC)
+    # ⏱️ Slot 1: Subah 09:00 AM IST (03:30 UTC)
+    - cron: '30 03 * * *' 
+    
+    # ⏱️ Slot 2: Dopehar 01:00 PM IST (07:30 UTC)
+    - cron: '30 07 * * *' 
+    
+    # ⏱️ Slot 3: Shaam 07:00 PM IST (13:30 UTC)
     - cron: '30 13 * * *' 
+    
+    # ⏱️ Slot 4: Raat 10:30 PM IST (17:00 UTC)
+    - cron: '00 17 * * *' 
+
   workflow_dispatch: 
 
 jobs:
@@ -38,7 +46,7 @@ jobs:
           YT_TOKEN_JSON: ${{ secrets.YT_TOKEN_JSON }}
         run: |
           # 🎲 0 se 3600 seconds (1 ghanta) ka random delay
-          # Isse subah 10-11 bje aur shaam 7-8 bje ke beech random posting hogi
+          # Isse exact time ki jagah 1 ghante ki window mein kabhi bhi post ho jayega
           delay=$((RANDOM % 3601))
           echo "Waiting for $delay seconds..."
           sleep $delay
