@@ -98,7 +98,7 @@ def download_random_music():
 def get_video():
     print("🎥 Fetching HIGH QUALITY luxury video from Pexels...")
     posted_ids = load_posted_ids()
-    queries = ["luxury cars 4k", "modern architecture hd", "expensive lifestyle aesthetic", "luxury villa portrait"]
+    queries = ["luxury cars 4k", "supercars aesthetic", "expensive cars cinematic", "luxury car interior 4k"]
     headers = {"Authorization": PEXELS_KEY}
     url = f"https://api.pexels.com/videos/search?query={random.choice(queries)}&per_page=30&orientation=portrait"
     res = requests.get(url, headers=headers).json()
