@@ -1,61 +1,59 @@
-name: Krold Master AutoPost
+name: Luxury Car Bot
 
 on:
   schedule:
-    # ⏱️ Slot 1: Subah 09:00 AM IST (03:30 UTC)
-    - cron: '30 03 * * *' 
+    # --- 4 Baar Post Karne Ka Schedule (UTC Time) ---
+    # India Time (IST) ke hisaab se:
     
-    # ⏱️ Slot 2: Dopehar 01:00 PM IST (07:30 UTC)
-    - cron: '30 07 * * *' 
+    # 1. Subah 9:00 AM IST
+    - cron: '30 3 * * *'
     
-    # ⏱️ Slot 3: Shaam 07:00 PM IST (13:30 UTC)
-    - cron: '30 13 * * *' 
+    # 2. Dopahar 1:00 PM IST
+    - cron: '30 7 * * *'
     
-    # ⏱️ Slot 4: Raat 10:30 PM IST (17:00 UTC)
-    - cron: '00 17 * * *' 
-
-  workflow_dispatch: 
+    # 3. Shaam 5:00 PM IST
+    - cron: '30 11 * * *'
+    
+    # 4. Raat 9:00 PM IST
+    - cron: '30 15 * * *'
+  
+  workflow_dispatch:      # Manual 'Run' button
 
 jobs:
-  build:
+  run_bot:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      
+
     steps:
-      - uses: actions/checkout@v3
-        with:
-          persist-credentials: true
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-      
-      - name: Install FFmpeg & Libraries
-        run: |
-          sudo apt-get update && sudo apt-get install -y ffmpeg
-          pip install "moviepy<2.0.0" "pydantic<2.0" instagrapi requests google-api-python-client google-auth-oauthlib
 
-      - name: Run Bot with Random Delay
+      - name: Install Libraries (Direct Mode)
+        run: |
+          # Pehle pip update karte hain
+          python -m pip install --upgrade pip setuptools wheel
+          
+          # Direct install taaki koi version conflict na ho
+          pip install google-api-python-client google-auth-oauthlib google-auth-httplib2 requests moviepy==1.0.3 "numpy<2.0.0" instagrapi==1.17.0
+
+      - name: Run Main Script
         env:
-          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          # Google Secrets
+          G_CLIENT_ID: ${{ secrets.G_CLIENT_ID }}
+          G_CLIENT_SECRET: ${{ secrets.G_CLIENT_SECRET }}
+          G_REFRESH_TOKEN: ${{ secrets.G_REFRESH_TOKEN }}
+          
+          # Instagram Secrets
           INSTA_USERNAME: ${{ secrets.INSTA_USERNAME }}
           INSTA_PASSWORD: ${{ secrets.INSTA_PASSWORD }}
-          INSTA_SESSION_JSON: ${{ secrets.INSTA_SESSION_JSON }}
-          YT_TOKEN_JSON: ${{ secrets.YT_TOKEN_JSON }}
-        run: |
-          # 🎲 0 se 3600 seconds (1 ghanta) ka random delay
-          # Isse exact time ki jagah 1 ghante ki window mein kabhi bhi post ho jayega
-          delay=$((RANDOM % 3601))
-          echo "Waiting for $delay seconds..."
-          sleep $delay
-          python multi_bot.py
-
-      - name: Commit and Push History
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add posted_videos.txt
-          git commit -m "Update posted videos history [skip ci]" || echo "No changes to commit"
-          git push
+          # IMPORTANT: Tumhara secret name 'INSTA_SESSION_JSON' hai, isliye yahan change kiya hai:
+          INSTA_SESSION: ${{ secrets.INSTA_SESSION_JSON }}
+          
+          # Drive Folders
+          DRIVE_FOLDER_ID: ${{ secrets.DRIVE_FOLDER_ID }}
+          DRIVE_DONE_ID: ${{ secrets.DRIVE_DONE_ID }}
+        run: python main.py
