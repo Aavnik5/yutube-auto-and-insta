@@ -1,186 +1,183 @@
-import os, random, json, requests
+import os
+import json
+import random
+import time
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
+from google.auth.transport.requests import Request
 from instagrapi import Client
 
-# --- MOVIEPY VERSION FIX ---
-try:
-    from moviepy.editor import VideoFileClip, AudioFileClip
-except ImportError:
-    from moviepy.video.io.VideoFileClip import VideoFileClip
-    from moviepy.audio.io.AudioFileClip import AudioFileClip
+# --- VIDEO EDITING LIBRARY ---
+from moviepy.editor import VideoFileClip, vfx
 
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
-from google.oauth2.credentials import Credentials
+# --- SETTINGS ---
+SOURCE_FOLDER = os.environ["DRIVE_FOLDER_ID"]
+DONE_FOLDER = os.environ["DRIVE_DONE_ID"]
 
-# --- CONFIGURATION ---
-PEXELS_KEY = os.getenv("PEXELS_API_KEY")
-INSTA_USER = os.getenv("INSTA_USERNAME")
-INSTA_PASS = os.getenv("INSTA_PASSWORD")
-FOLDER_ID = "16xkYWn6J3oFm5GSGytr2go18QMHjVgpo"
-# 📄 History file name
-HISTORY_FILE = "posted_videos.txt"
+# --- LUXURY & CAR TITLES ---
+TITLES = [
+    "Dream Garage Goals 🏎️💨 #Luxury",
+    "Millionaire Lifestyle 💸 #Rich",
+    "Supercar Sound on! 🔊 #Cars",
+    "Success Looks Like This 🚀 #Goals",
+    "Work Hard, Drive Fast 🏁 #Motivation",
+    "Luxury Life Unlocked 🔑 #Wealth",
+    "The View from the Top 🌆 #Lifestyle",
+    "POV: You Made It 🏆 #Success",
+    "Beast Mode ON 🔥 #Supercars"
+]
 
-# --- NEW: HISTORY TRACKER FUNCTIONS ---
-def load_posted_ids():
-    if os.path.exists(HISTORY_FILE):
-        with open(HISTORY_FILE, "r") as f:
-            return set(line.strip() for line in f)
-    return set()
+# --- LUXURY & CAR HASHTAGS ---
+HASHTAGS = """
+#luxurycars #supercars #dreamcar #millionaire #wealth #lifestyle 
+#ferrari #lamborghini #porsche #money #success #rich #carlifestyle 
+#luxurylife #entrepreneur #motivation #fastcars
+"""
 
-def save_posted_id(video_id):
-    with open(HISTORY_FILE, "a") as f:
-        f.write(f"{video_id}\n")
+# --- CAPTION ---
+INSTA_CAPTION = """
+Rate this beast 1-10! 🔥
+.
+Claim this lifestyle! Type 'YES' 👇
+.
+Follow for daily luxury vibes! 🚀
+.
+.
+""" + HASHTAGS
 
-# --- 1. VIRAL CONTENT GENERATOR (50+ Set) ---
-def get_viral_content():
-    captions = [
-        "Success is a mindset, not a destination. ✨", "The grind is silent, the success is loud. 🦁",
-        "Luxury is the reward for your hard work. 💰", "Your future self is counting on you. 💎",
-        "Dream big, work harder. 🏆", "Level up in private. Let them wonder. 🌪️",
-        "Work until your bank account looks like a phone number. 📞", "Silence is the best status symbol. 🤫",
-        "I didn't come this far to only come this far. 🏎️", "Invest in your dreams. Grind now, shine later. 🥂",
-        "Classy is when you have a lot to say but stay silent. 🎩", "Your only limit is your mind. ⛓️",
-        "Don't stay in bed unless you're making money. 🛌", "Life is short. Make every second count. ⌚",
-        "The best revenge is massive success. 🔥", "Don't stop until you're proud. 👑",
-        "Focus on the goal, not the obstacles. 🎯", "Consistency is what transforms average into excellence. 🛠️",
-        "Wealth is a state of mind. 🏦", "Be so good they can't ignore you. 🌟",
-        "Discipline will take you where motivation can't. 🚀", "Small steps lead to big results. 📈",
-        "Style is a reflection of your attitude. 👔", "Chasing dreams, catching excellence. 🌌",
-        "Quality over quantity, always. 💎", "Live life on your own terms. 🗺️",
-        "A goal without a plan is just a wish. 🌠", "Everything you want is on the other side of fear. 🦁",
-        "Master your mindset, master your life. 🧠", "Stay humble, stay focused, stay blessed. 🙏",
-        "The secret of getting ahead is getting started. 🚦", "Your energy is your currency. Spend it wisely. ⚡",
-        "Hustle until your haters ask if you're hiring. 💼", "Winners focus on winning, losers focus on winners. 🏆",
-        "Great things never come from comfort zones. 🛋️", "Success belongs to those who prepare for it. 📝",
-        "Building an empire in silence. 🏗️", "Manifesting a life full of luxury. ✨",
-        "Stay hungry, stay foolish. 🍎", "If you want to be successful, be consistent. 🔄",
-        "Don't tell people your dreams, show them. 🎬", "Be the person you've always wanted to meet. 💎",
-        "Hard work beats talent when talent doesn't work hard. ⚡", "I’m not lucky, I’m hardworking. 🍀",
-        "Success is my only option. 🎯", "Vision without action is just a dream. 👁️",
-        "Make your life a masterpiece. 🖼️", "The journey is the reward. 🛤️",
-        "Choose your path and walk it with pride. 👞", "Turn your obstacles into opportunities. 🛠️"
-    ]
-    hashtags_pool = [
-        "#Luxury", "#Wealth", "#Success", "#Motivation", "#Mindset", "#Entrepreneur", "#Goals", "#Billionaire",
-        "#RichLife", "#Millionaire", "#FinancialFreedom", "#LuxuryLifestyle", "#Aesthetic", "#Shorts", "#Reels",
-        "#Viral", "#Trending", "#Explore", "#HighLife", "#Elite", "#Ambition", "#DreamBig", "#Wealthy",
-        "#MoneyMindset", "#RichVibes", "#ClassicStyle", "#Vibe", "#SuccessMindset", "#Hustle", "#DailyMotivation",
-        "#VisualAesthetic", "#Modern", "#Dubai", "#Monaco", "#ExpensiveTaste", "#HighSociety", "#Classy",
-        "#LuxuryTravel", "#LuxuryCars", "#Supercars", "#Architecture", "#ModernVilla", "#BusinessOwner",
-        "#AestheticPost", "#Power", "#GrowthMindset", "#SelfImprovement", "#Income", "#Asset", "#PassiveIncome"
-    ]
-    selected_caption = random.choice(captions)
-    tag_string = " ".join(random.sample(hashtags_pool, 15))
-    return f"{selected_caption}\n.\n.\n.\n{tag_string}", selected_caption
+# --- GOOGLE LOGIN ---
+def get_google_services():
+    creds = Credentials(
+        None, 
+        refresh_token=os.environ["G_REFRESH_TOKEN"],
+        token_uri="https://oauth2.googleapis.com/token",
+        client_id=os.environ["G_CLIENT_ID"], 
+        client_secret=os.environ["G_CLIENT_SECRET"]
+    )
+    if not creds.valid:
+        creds.refresh(Request())
+    
+    return build('drive', 'v3', credentials=creds), build('youtube', 'v3', credentials=creds)
 
-# --- 2. DRIVE MUSIC AUTO-SCANNER ---
-def download_random_music():
-    print("📥 Scanning Google Drive folder for music...")
+# --- EDITING FUNCTION (Speed + Filter + Gap) ---
+def edit_video(input_path, output_path):
+    print("Editing Start: Adding Speed, Filter, and Border...")
+    
+    # 1. Video Load
+    clip = VideoFileClip(input_path)
+    
+    # 2. Speed 1.1x (Fast)
+    clip = clip.fx(vfx.speedx, 1.1)
+    
+    # 3. Filter (Color Vibrance 1.2x)
+    clip = clip.fx(vfx.colorx, 1.2)
+    
+    # 4. Border/Gap (White Color padding)
+    # top, bottom, left, right = 40 pixels ka gap
+    clip = clip.margin(top=40, bottom=40, left=40, right=40, color=(255, 255, 255))
+    
+    # 5. Save Final Video
+    clip.write_videofile(output_path, codec="libx264", audio_codec="aac", fps=24, verbose=False, logger=None)
+    print("Editing Complete! Video ready for upload.")
+
+# --- MAIN BOT ---
+def main():
+    print("--- Bot Started ---")
+    
     try:
-        creds_info = json.loads(os.getenv("YT_TOKEN_JSON"))
-        creds = Credentials.from_authorized_user_info(creds_info)
-        service = build('drive', 'v3', credentials=creds)
-        results = service.files().list(q=f"'{FOLDER_ID}' in parents and mimeType='audio/mpeg'", fields="files(id, name)").execute()
-        items = results.get('files', [])
-        if not items: return None
-        selected_file = random.choice(items)
-        file_id = selected_file['id']
-        url = f'https://drive.google.com/uc?export=download&id={file_id}'
-        os.makedirs("music", exist_ok=True)
-        path = "music/bg_audio.mp3"
-        res = requests.get(url, stream=True)
-        with open(path, 'wb') as f:
-            for chunk in res.iter_content(chunk_size=8192): f.write(chunk)
-        return path
-    except Exception as e: return None
+        drive, youtube = get_google_services()
+    except Exception as e:
+        print(f"Login Failed: {e}")
+        return
 
-# --- 3. PEXELS VIDEO FETCH (High Quality & History Filter) ---
-def get_video():
-    print("🎥 Fetching HIGH QUALITY luxury video from Pexels...")
-    posted_ids = load_posted_ids()
-    queries = ["ferrari",  "car drift",  "bmw",  "bmw m4", "bmw m5",  "lamborghini",  "bmw m3",  "mercedes" ,  "luxury car"]
-    headers = {"Authorization": PEXELS_KEY}
-    url = f"https://api.pexels.com/videos/search?query={random.choice(queries)}&per_page=30&orientation=portrait"
-    res = requests.get(url, headers=headers).json()
-    
-    # 💎 Filter videos not in history
-    valid_videos = [v for v in res['videos'] if v['duration'] >= 25 and str(v['id']) not in posted_ids]
-    
-    if not valid_videos:
-        print("⚠️ All fetched videos were already posted. Trying fallback...")
-        video_data = random.choice(res['videos']) # Fallback if everything is duplicate
-    else:
-        video_data = random.choice(valid_videos)
-    
-    video_id = str(video_data['id'])
-    best_file = max(video_data['video_files'], key=lambda x: x['width'])
-    print(f"💎 Selected Resolution: {best_file['width']}x{best_file['height']} (ID: {video_id})")
-    
-    with open("raw_video.mp4", "wb") as f:
-        f.write(requests.get(best_file['link']).content)
-    return "raw_video.mp4", video_id
+    # 1. Drive Check
+    print("Checking Drive for videos...")
+    query = f"'{SOURCE_FOLDER}' in parents and mimeType contains 'video/' and trashed=false"
+    results = drive.files().list(q=query, fields="files(id, name)", pageSize=1).execute()
+    files = results.get('files', [])
 
-# --- 4. MIXING & CLIPPING (Pro Encoding Settings) ---
-def create_final_video(video_path, audio_path):
-    print("🎬 Mixing with Professional Encoding (30s)...")
+    if not files:
+        print("Folder khali hai.")
+        return
+
+    video = files[0]
+    print(f"Video Found: {video['name']}")
+
+    # 2. Download Raw Video
+    print("Downloading raw video...")
+    raw_video = "raw_video.mp4"
+    final_video = "final_video.mp4"
+    
+    request = drive.files().get_media(fileId=video['id'])
+    with open(raw_video, "wb") as f:
+        downloader = MediaIoBaseDownload(f, request)
+        done = False
+        while done is False:
+            status, done = downloader.next_chunk()
+
+    # 3. Apply Editing
     try:
-        video = VideoFileClip(video_path).without_audio()
-        if video.duration > 30: video = video.subclip(0, 30)
-        target_dur = video.duration
+        edit_video(raw_video, final_video)
+        video_to_upload = final_video
+    except Exception as e:
+        print(f"Editing Failed (Error: {e}). Uploading Raw Video instead.")
+        video_to_upload = raw_video
+
+    title_text = random.choice(TITLES)
+
+    # 4. YouTube Upload
+    try:
+        print(f"Uploading to YouTube: {video_to_upload}")
+        body = {
+            'snippet': {
+                'title': title_text,
+                'description': f"Luxury Lifestyle & Cars \n\n{HASHTAGS}",
+                'tags': ['luxury', 'cars', 'supercars', 'shorts', 'wealth'],
+                'categoryId': '2' # Autos & Vehicles category
+            },
+            'status': {'privacyStatus': 'public', 'selfDeclaredMadeForKids': False}
+        }
+        media = MediaFileUpload(video_to_upload, chunksize=-1, resumable=True)
+        yt_resp = youtube.videos().insert(part="snippet,status", body=body, media_body=media).execute()
+        print(f"YouTube Success! ID: {yt_resp['id']}")
+    except Exception as e:
+        print(f"YouTube Error: {e}")
+
+    # 5. Instagram Upload
+    try:
+        print("Uploading to Instagram...")
+        cl = Client()
         
-        if audio_path and os.path.exists(audio_path):
-            audio = AudioFileClip(audio_path).set_duration(target_dur)
-            video = video.set_audio(audio)
-            
-        output = "final_output.mp4"
-        # 🚀 HIGH QUALITY ENCODING
-        video.write_videofile(
-            output, 
-            codec="libx264", 
-            audio_codec="aac", 
-            fps=30, 
-            bitrate="10000k", 
-            preset="slow",
-            ffmpeg_params=["-crf", "18"],
-            logger=None
-        )
-        return output
-    except Exception as e: return video_path
+        # Session Load
+        session_data = json.loads(os.environ["INSTA_SESSION"])
+        cl.set_settings(session_data)
+        cl.login(os.environ["INSTA_USERNAME"], os.environ["INSTA_PASSWORD"])
+        
+        cl.clip_upload(video_to_upload, f"{title_text}\n\n{INSTA_CAPTION}")
+        print("Instagram Success!")
+    except Exception as e:
+        print(f"Instagram Error: {e}")
 
-# --- MAIN EXECUTION ---
+    # 6. Cleanup & Move
+    try:
+        print("Moving video to Done folder...")
+        file_drive = drive.files().get(fileId=video['id'], fields='parents').execute()
+        prev_parents = ",".join(file_drive.get('parents'))
+        
+        drive.files().update(
+            fileId=video['id'],
+            addParents=DONE_FOLDER,
+            removeParents=prev_parents
+        ).execute()
+    except Exception as e:
+        print(f"Drive Move Error: {e}")
+        
+    # Remove local files
+    if os.path.exists(raw_video): os.remove(raw_video)
+    if os.path.exists(final_video): os.remove(final_video)
+    
+    print("--- Process Complete ---")
+
 if __name__ == "__main__":
-    try:
-        insta_cap, yt_title = get_viral_content()
-        # Receive video ID for tracking
-        v_raw, v_id = get_video()
-        a_raw = download_random_music()
-        final_video = create_final_video(v_raw, a_raw)
-        
-        success_flag = False
-
-        # Instagram
-        try:
-            cl = Client()
-            cl.set_settings(json.loads(os.getenv("INSTA_SESSION_JSON")))
-            cl.login(os.getenv("INSTA_USERNAME"), os.getenv("INSTA_PASSWORD"))
-            cl.clip_upload(final_video, caption=insta_cap)
-            print("✅ Instagram Success!")
-            success_flag = True
-        except Exception as e: print(f"❌ Insta Fail: {e}")
-
-        # YouTube
-        try:
-            creds = Credentials.from_authorized_user_info(json.loads(os.getenv("YT_TOKEN_JSON")))
-            yt = build('youtube', 'v3', credentials=creds)
-            body = {'snippet': {'title': yt_title, 'description': f'{yt_title} #Shorts #Luxury', 'categoryId': '22'},
-                    'status': {'privacyStatus': 'public', 'selfDeclaredMadeForKids': False}}
-            yt.videos().insert(part='snippet,status', body=body, media_body=MediaFileUpload(final_video)).execute()
-            print("✅ YouTube Success!")
-            success_flag = True
-        except Exception as e: print(f"❌ YouTube Fail: {e}")
-
-        # Save ID only if at least one platform succeeded
-        if success_flag:
-            save_posted_id(v_id)
-
-    except Exception as e: print(f"💀 Fatal Error: {e}")
+    main()
